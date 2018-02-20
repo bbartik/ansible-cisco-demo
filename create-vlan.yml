@@ -1,0 +1,50 @@
+---
+- name: Configure VLAN
+  hosts: all
+  connection: local
+  gather_facts: no
+  vars_files:
+  - auth.yml
+  - "{{ cust_info }}"
+
+  tasks:
+
+  - name: configure provider
+    set_fact:
+      provider:
+        username: "{{ username }}"
+        password: "{{ password }}"
+        host: "{{ inventory_hostname }}"
+
+  - name: configure vlan database
+    ios_command:
+      provider: "{{ provider }}"
+      commands:
+      - vlan database
+      - vlan {{ vlan }}
+      - apply
+    with_items: "{{ edgeports }}"
+    when: (item.sw == inventory_hostname)
+
+  - name: configure switch ports
+    ios_config:
+      provider: "{{ provider }}"
+      lines:
+      - switchport trunk allowed vlan add {{vlan}}
+      parents:
+      - interface {{ item.port }}
+    with_items: "{{ edgeports }}"
+    when: (item.sw == inventory_hostname)
+
+
+  - name: configure router sub-interfaces
+    ios_config:
+      authorize: yes
+      provider: "{{ provider }}"
+      lines:
+      - encapsulation dot1q {{ vlan }}
+      - ip address {{ item.address }} {{ item.mask }}
+      parents:
+      - interface {{ item.port }}
+    with_items: "{{ routerports }}"
+    when: (item.rtr == inventory_hostname)
