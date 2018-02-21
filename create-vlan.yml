@@ -23,6 +23,7 @@
       - vlan database
       - vlan {{ vlan }}
       - apply
+      - exit
     with_items: "{{ edgeports }}"
     when: (item.sw == inventory_hostname)
 
